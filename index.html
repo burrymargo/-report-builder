@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Конструктор отчетов по обучению — stable v16</title>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--text:#17191c;--muted:#6b7280;--line:#e5e7eb;--accent:#005bff;--accent2:#eef4ff;--danger:#b42318;--ok:#067647}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:1220px;margin:32px auto;padding:0 20px 48px}h1{font-size:30px;margin:0 0 8px}.sub{color:var(--muted);margin-bottom:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.card h2{font-size:19px;margin:0 0 16px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+label{font-size:13px;font-weight:600;display:block;margin-bottom:6px}input[type=file],input[type=text],input[type=number],select{width:100%;border:1px solid #cfd4dc;border-radius:10px;padding:10px 12px;background:#fff;font-size:14px}
+button,.buttonlike{border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;justify-content:center}
+.primary{background:var(--accent);color:white}.secondary{background:#eef0f3;color:#17191c}.ghost{background:white;border:1px solid var(--line);color:#17191c}.danger{background:#fff1f0;color:var(--danger)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.spacer{flex:1}.status{font-size:13px;color:var(--muted);margin-top:8px}.ok{color:var(--ok)}.err{color:var(--danger)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:middle}th{font-size:12px;color:var(--muted);font-weight:700;background:#fafafa;position:sticky;top:0;z-index:1}
+.tablewrap{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:12px}.keepcell{width:80px;text-align:center}.small{font-size:12px;color:var(--muted)}
+.filter-row{display:grid;grid-template-columns:64px 1.25fr 1fr 1.35fr 104px 84px;gap:8px;margin-bottom:10px;align-items:center}.priority{font-weight:700;text-align:center;background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:10px 4px}.filter-actions{display:flex;gap:4px}.filter-actions button{padding:8px 9px}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--accent2);font-size:12px;color:#1246a3}.hidden{display:none!important}.notice{padding:12px 14px;border-radius:10px;background:#f8fafc;border:1px solid var(--line);font-size:13px;color:#475467}.rule-note{padding:12px 14px;border-radius:10px;background:#f8fafc;border:1px solid var(--line);font-size:13px;color:#475467;margin:12px 0}.rule-note b{color:#344054}.switchline{display:flex;gap:10px;align-items:center;margin-bottom:12px}.switchline input{width:auto}
+.summary-preview{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.metric{background:#fafafa;border:1px solid var(--line);border-radius:10px;padding:12px}.metric b{display:block;font-size:20px;margin-top:4px}
+.filecard{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fafafa;position:relative}.filecard .remove-source{position:absolute;right:10px;top:10px;padding:6px 9px}.sources-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}.tab{background:#eef0f3}.tab.active{background:var(--accent);color:#fff}.preview-controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}.preview-controls>div{min-width:220px}.previewbox{border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:520px;background:#fff}.previewbox table{min-width:800px}.preview-note{font-size:12px;color:var(--muted);margin-top:8px}.renamed{color:#1246a3;font-weight:600}.letter{display:inline-block;min-width:28px;color:#667085;font-weight:700}
+@media(max-width:900px){.grid2,.grid4,.grid5,.summary-preview,.sources-grid{grid-template-columns:1fr}.filter-row{grid-template-columns:1fr}.wrap{padding:0 12px}.priority{text-align:left}.preview-controls>div{min-width:100%;width:100%}}
+
+.lookup-condition-row,.post-lookup-filter-row{display:grid;grid-template-columns:1fr 52px 1fr 42px;gap:8px;align-items:end;margin:8px 0}
+.post-lookup-filter-row{grid-template-columns:1fr 160px 1fr 42px}
+.lookup-condition-row .eq{text-align:center;padding-bottom:10px;font-weight:700;color:#667085}
+@media(max-width:800px){.lookup-condition-row,.post-lookup-filter-row{grid-template-columns:1fr}.lookup-condition-row .eq{display:none}}
+</style>
+
+<style id="v5-extra-styles">
+.order-controls{display:flex;gap:6px;justify-content:center}.order-btn{padding:5px 8px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer}.summary-level-row{display:grid;grid-template-columns:42px minmax(180px,1fr) 130px 110px 42px;gap:8px;align-items:center;margin:8px 0}.summary-level-row input[type=color]{padding:2px;height:38px}.details-card details{border:1px solid var(--line);border-radius:12px;background:#fff}.details-card summary{cursor:pointer;padding:14px 16px;font-weight:700;list-style:none}.details-card summary::-webkit-details-marker{display:none}.details-card summary:after{content:"⌄";float:right;color:#667085}.details-card details[open] summary:after{content:"⌃"}.details-body{padding:0 16px 16px}.style-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.checkline{display:flex;gap:8px;align-items:center}.checkline input{width:auto}@media(max-width:900px){.summary-level-row{grid-template-columns:34px 1fr 100px 95px 34px}.style-grid{grid-template-columns:1fr}}
+</style>
+<style id="v6-extra">
+.lookup-order-row{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin:6px 0;background:#fff}
+.lookup-order-actions{display:flex;gap:6px;justify-content:flex-end}.lookup-order-actions button{padding:5px 9px}
+.summary-source-hint{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#f8fafc;color:#475467;font-size:13px}
+.summary-source-hint b{color:#344054}
+</style></head>
+<body>
+<div class="wrap">
+<h1>Конструктор отчетов по обучению</h1>
+<div class="sub">Загрузи Excel-таблицы, настрой обработку и выгрузи готовый отчет.</div>
+
+<div class="card">
+  <div class="row"><h2 style="margin:0">1. Загрузка файлов</h2><div class="spacer"></div><button id="addSource" class="secondary">+ Добавить файл</button></div>
+  <div class="sources-grid" id="sourceCards">
+    <div class="filecard" data-source="1">
+      <label>Таблица 1 — основная</label><input id="file1" type="file" accept=".xlsx" />
+      <div id="file1status" class="status">Файл не выбран</div>
+      <div id="sheet1wrap" class="hidden" style="margin-top:10px"><div class="grid2"><div><label>Лист</label><select id="sheet1"></select></div><div><label>Строка заголовков</label><input id="headerRow1" type="number" min="1" value="1"></div></div></div>
+    </div>
+    <div class="filecard" data-source="2">
+      <label>Таблица 2</label><input id="file2" type="file" accept=".xlsx" />
+      <div id="file2status" class="status">Файл не выбран</div>
+      <div id="sheet2wrap" class="hidden" style="margin-top:10px"><div class="grid2"><div><label>Лист</label><select id="sheet2"></select></div><div><label>Строка заголовков</label><input id="headerRow2" type="number" min="1" value="1"></div></div></div>
+    </div>
+  </div>
+  <div class="rule-note"><b>Как работает:</b> основной файл задаёт таблицу для обработки. Источником сопоставления может быть другой лист этого же файла, Таблица 2 или любой дополнительный файл.</div>
+</div>
+
+<div id="settings" class="hidden">
+  <div class="card">
+    <div class="row"><h2 style="margin:0">2. Столбцы Таблицы 1</h2><div class="spacer"></div><button id="keepAll" class="ghost">Оставить все</button><button id="dropAll" class="ghost">Убрать все</button></div>
+    <div class="rule-note"><b>Как работает:</b> выбери столбцы для итогового файла и при необходимости переименуй их. Удаление столбцов выполняется после очистки строк в блоке 3.</div><div class="rule-note"><b>Порядок столбцов:</b> используй стрелки ↑ ↓ справа. Итоговый файл будет сформирован в этом же порядке.</div>
+    <div class="tablewrap"><table><thead><tr><th class="keepcell">Оставить</th><th>Исходное название</th><th>Название в отчете</th><th>Порядок</th></tr></thead><tbody id="columnsBody"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="row"><h2 style="margin:0">3. Фильтры — какие строки удалить</h2><div class="spacer"></div><button id="addFilter" class="secondary">+ Добавить условие</button></div>
+    <div class="rule-note"><b>Как работает:</b> правила выполняются сверху вниз. Сначала удаляются строки по фильтрам, затем применяются настройки столбцов. Порядок правил можно менять стрелками ↑ ↓.</div>
+    <div id="filters"></div><div class="notice" id="noFilters">Фильтры не заданы — строки удаляться не будут.</div>
+    <div id="filterStats" class="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. Создание логина</h2>
+    <div class="grid2"><div><label>Создать «Логины» из столбца</label><select id="loginSource"></select></div><div><label>Правило</label><select id="loginRule"><option value="beforeAt">Текст до @</option><option value="full">Полное значение</option></select></div></div>
+    <div class="rule-note"><b>Как работает:</b> столбец «Логины» создаётся из выбранного поля и всегда становится первым столбцом результата.</div>
+  </div>
+
+  <div class="card">
+    <h2>5. Сопоставление данных</h2>
+    <div class="switchline"><input id="useLookup" type="checkbox" checked><label for="useLookup" style="margin:0">Использовать сопоставление (аналог ВПР)</label></div>
+    <div class="rule-note"><b>Как работает:</b> источник может находиться в другом файле или на другом листе того же файла. Если сопоставление не нужно, выключи переключатель — тогда можно просто очистить и переименовать одну таблицу.</div>
+    <div class="grid5">
+      <div><label>Файл-источник</label><select id="lookupSource"></select></div>
+      <div><label>Лист-источник</label><select id="lookupSheet"></select></div>
+      <div><label>Ключ в основной таблице</label><select id="key1"></select></div>
+      <div><label>Ключ в источнике</label><select id="key2"></select></div>
+      <div><label>Статус в источнике</label><select id="status2"></select></div>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div><label>Дата назначения в источнике</label><select id="date2"></select></div>
+      <div><label>Строка заголовков листа-источника</label><input id="lookupHeaderRow" type="number" min="1" value="1"></div>
+    </div>
+  
+    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+      <h3 style="margin:0 0 8px">Дополнительные условия ВПР</h3>
+      <div class="rule-note"><b>Как работает:</b> основной ключ выше остаётся обязательным. Если нужно уточнить поиск, добавь дополнительные пары полей. Строка считается найденной только если совпал основной ключ и все дополнительные условия.</div>
+      <div id="lookupConditions"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" id="addLookupCondition" class="secondary">+ Добавить условие ВПР</button><button type="button" id="clearLookupConditions" class="ghost">Очистить условия</button></div>
+    </div>
+
+    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+      <h3 style="margin:0 0 8px">Фильтры после ВПР</h3>
+      <div class="rule-note"><b>Как работает:</b> сначала выполняется сопоставление и создаются новые поля, затем применяются эти фильтры. Например, здесь можно удалить строки, где «Статус прохождения обучения = Заблокирована УЗ в LMS». Такие строки не попадут ни в результат, ни в сводную.</div>
+      <div id="postLookupFilters"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" id="addPostLookupFilter" type="button" class="secondary" onclick="addPostLookupFilter()">+ Добавить фильтр</button><button type="button" id="clearPostLookupFilters" type="button" class="ghost" onclick="clearPostLookupFiltersSafe()">Очистить фильтры</button></div>
+    </div>
+
+    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+      <h3 style="margin:0 0 8px">Порядок новых столбцов</h3>
+      <div class="rule-note"><b>Как работает:</b> здесь задаётся порядок столбцов, которые создаются при сопоставлении. Их можно поменять местами и вставить в нужное место итоговой таблицы.</div>
+      <div id="lookupNewColumnsOrder"></div>
+      <div style="margin-top:10px;max-width:440px"><label>Куда вставить новые столбцы</label><select id="lookupInsertAfter"></select></div>
+    </div>
+</div>
+
+  <div class="card">
+    <h2>6. Настройка сводной</h2>
+    <div class="rule-note"><b>Как работает:</b> добавляй столько уровней, сколько нужно. Порядок сверху вниз определяет вложенность. Для каждого уровня можно задать цвет и жирность.</div><div id="summarySourceHint" class="summary-source-hint"></div>
+    <div id="summaryLevels"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" id="addSummaryLevel" class="secondary">+ Добавить уровень</button><button type="button" id="resetSummaryLevels" class="ghost">Вернуть базовые уровни</button></div>
+    <div class="grid3" style="margin-top:16px"><div><label>Поле для столбцов</label><select id="summaryColumnField"></select></div><div><label>Статус, считающийся завершением</label><input id="completedStatus" type="text" value="Завершен"></div><div><label>Порядок значений в столбцах (через ;)</label><input id="statusOrder" type="text" value="В процессе;Заблокирована УЗ в LMS;Завершен;Не начат;(пусто)"></div><div class="rule-note"><b>Важно:</b> «Заблокирована УЗ в LMS» может формироваться автоматически из сотрудников, не найденных на листе «Прогресс пользователей». Настройка находится в блоке 5.</div></div>
+    <div class="grid3" style="margin-top:12px"><div><label>Сортировка уровней</label><select id="summarySortMode"><option value="source">Как в источнике</option><option value="alpha">По алфавиту</option><option value="countdesc">По количеству, убывание</option></select></div><div><label>Показывать пустые значения</label><select id="summaryShowBlanks"><option value="yes">Да, как «(пусто)»</option><option value="no">Нет</option></select></div><div><label>Общий итог</label><select id="summaryGrandTotal"><option value="yes">Показывать</option><option value="no">Скрыть</option></select></div></div>
+  </div>
+
+  <div class="card details-card">
+    <details id="styleEditor">
+      <summary>7. Оформление и визуальные настройки</summary>
+      <div class="details-body"><div class="rule-note"><b>Базовые настройки уже применены.</b> Этот блок можно не трогать. Если нужно, здесь можно детально настроить внешний вид итогового Excel.</div>
+        <div class="style-grid"><div><label>Шапка основной таблицы</label><input id="styleMainHeader" type="color" value="#DCE6F1"></div><div><label>Шапка сводной</label><input id="styleSummaryHeader" type="color" value="#D9EAF7"></div><div><label>Чередующиеся строки</label><input id="styleAltRow" type="color" value="#F2F7FC"></div><div><label>Итоговые строки</label><input id="styleTotalRow" type="color" value="#E2F0D9"></div><div><label>Границы</label><input id="styleBorder" type="color" value="#B4C6E7"></div><div><label>Блок показателей</label><input id="styleKpi" type="color" value="#F3F4F6"></div><div class="checkline"><input id="styleBoldHeaders" type="checkbox" checked><label for="styleBoldHeaders" style="margin:0">Жирные заголовки</label></div><div class="checkline"><input id="styleBorders" type="checkbox" checked><label for="styleBorders" style="margin:0">Границы таблиц</label></div><div class="checkline"><input id="styleAlternating" type="checkbox" checked><label for="styleAlternating" style="margin:0">Чередование строк</label></div><div><label>Высота шапки</label><input id="styleHeaderHeight" type="number" min="18" max="50" value="22"></div><div><label>Ширина первого столбца сводной</label><input id="styleSummaryFirstColWidth" type="number" min="18" max="80" value="38"></div><div><label>Отступ на уровень</label><input id="styleIndentPerLevel" type="number" min="0" max="8" value="1"></div></div>
+        <div style="margin-top:12px"><button type="button" id="resetStyle" class="ghost">Сбросить оформление к базовому</button></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="row"><h2 style="margin:0">8. Шаблон настроек</h2><div class="spacer"></div><button id="saveProfile" class="secondary">Сохранить в браузере</button><button id="exportProfile" class="ghost">Экспорт настроек</button><label for="importProfile" class="buttonlike ghost" style="margin:0">Импорт настроек</label><input id="importProfile" type="file" accept=".json" style="display:none" /><button id="resetProfile" class="danger">Сбросить</button></div>
+    <div id="profileStatus" class="status">Сохраненные настройки будут подхватываться автоматически, если названия столбцов совпадают.</div>
+  </div>
+
+  <div class="card">
+    <div class="row"><h2 style="margin:0">9. Формирование отчета</h2><div class="spacer"></div><button id="refreshResult" class="secondary">Обновить предпросмотр</button><button id="build" class="primary">Сформировать отчет.xlsx</button></div>
+    <div id="buildStatus" class="status">Готово к настройке.</div><div id="metrics" class="summary-preview hidden"></div>
+  </div>
+
+  <div class="card">
+    <h2>10. Просмотр данных</h2>
+    <div class="tabs"><button class="tab active" data-tab="sourcePreview">Исходные файлы</button><button class="tab" data-tab="resultPreview">Результат</button><button class="tab" data-tab="summaryPreview">Сводная</button></div>
+    <div id="sourcePreview" class="tabpane">
+      <div class="preview-controls"><div><label>Файл</label><select id="previewSourceSelect"></select></div></div>
+      <div id="sourcePreviewBox" class="previewbox"></div><div class="preview-note">Показываются первые 100 строк выбранного файла.</div>
+    </div>
+    <div id="resultPreview" class="tabpane hidden"><div id="resultPreviewBox" class="previewbox"></div><div class="preview-note">Показываются первые 100 строк после фильтрации, переименования и сопоставления.</div></div>
+    <div id="summaryPreview" class="tabpane hidden"><div id="summaryPreviewBox" class="previewbox"></div></div>
+  </div>
+</div>
+</div>
+<script>
+const state={sources:{},nextSourceId:3,profileApplied:false,lastResult:null,columnOrder:[],summaryLevels:null,lookupNewColumnsOrder:['Статус прохождения обучения','Дата назначения']};
+const $=id=>document.getElementById(id); const norm=v=>String(v??'').trim(); const keyNorm=v=>{let s=norm(v).toLowerCase().trim();if(s.includes('@'))s=s.split('@')[0];return s.replace(/\s+/g,'');};
+function excelValue(v){if(v==null)return '';if(v instanceof Date)return v;if(typeof v==='object'){if(v.text!=null)return v.text;if(v.result!=null)return v.result;if(Array.isArray(v.richText))return v.richText.map(x=>x.text||'').join('');}return v;}
+function excelCol(n){let s='';while(n>0){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26);}return s;}
+function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function cssEscape(s){return window.CSS&&CSS.escape?CSS.escape(s):String(s).replace(/(["\\])/g,'\\$1');}
+function sourceLabel(id){if(id==='1')return 'Таблица 1';if(id==='2')return 'Таблица 2';return `Доп. файл ${id}`;}
+function worksheetToRows(ws,headerRowNumber=1){
+  const hr=Math.max(1,Number(headerRowNumber)||1),headerRow=ws.getRow(hr),headers=[];
+  const max=Math.max(ws.columnCount,headerRow.cellCount);
+  for(let c=1;c<=max;c++)headers.push(norm(excelValue(headerRow.getCell(c).value))||`Столбец ${excelCol(c)}`);
+  const rows=[];
+  ws.eachRow((row,rn)=>{
+    if(rn<=hr)return;
+    const obj={};let nonEmpty=false;
+    headers.forEach((h,i)=>{const v=excelValue(row.getCell(i+1).value);obj[h]=v;if(norm(v)!=='')nonEmpty=true;});
+    if(nonEmpty)rows.push(obj);
+  });
+  return{headers,rows};
+}
+function detectHeaderRow(ws){
+  let best=1,bestScore=-1;
+  for(let r=1;r<=Math.min(ws.rowCount,15);r++){
+    const vals=[];ws.getRow(r).eachCell({includeEmpty:false},c=>vals.push(norm(excelValue(c.value))));
+    const keyHits=vals.filter(v=>/логин|email|статус|дата|регион|объект|сотрудник|должност/i.test(v)).length;
+    const score=vals.filter(Boolean).length+keyHits*5;
+    if(vals.filter(Boolean).length>=2&&score>bestScore){bestScore=score;best=r;}
+  }
+  return best;
+}
+async function loadWorkbook(file,id){if(typeof ExcelJS==='undefined')throw new Error('Не удалось загрузить ExcelJS. Проверь доступ к интернету.');const wb=new ExcelJS.Workbook();await wb.xlsx.load(await file.arrayBuffer());const src=state.sources[id]||{id};src.wb=wb;src.fileName=file.name;src.headers=[];src.rows=[];state.sources[id]=src;const sel=$('sheet'+id);sel.innerHTML='';wb.worksheets.forEach(ws=>sel.add(new Option(ws.name,ws.name)));$('sheet'+id+'wrap').classList.remove('hidden');$('file'+id+'status').textContent=`${file.name} · ${wb.worksheets.length} лист(а)`;$('file'+id+'status').className='status ok';readSelectedSheet(id);}
+function readSelectedSheet(id){
+  const src=state.sources[id];if(!src?.wb)return;
+  const ws=src.wb.getWorksheet($('sheet'+id).value);
+  const hrEl=$('headerRow'+id);if(hrEl&&!hrEl.dataset.manual)hrEl.value=detectHeaderRow(ws);
+  const data=worksheetToRows(ws,hrEl?.value||1);
+  src.headers=data.headers;src.rows=data.rows;src.sheetName=ws.name;src.headerRow=Number(hrEl?.value)||1;
+  if(id==='1')renderColumns();
+  refreshAllSelectors();refreshSourcePreview();
+  if(state.sources['1']){$('settings').classList.remove('hidden');if(!state.profileApplied){applySavedProfile();state.profileApplied=true;}}
+}
+function addSourceCard(){
+  const id=String(state.nextSourceId++),card=document.createElement('div');
+  card.className='filecard';card.dataset.source=id;
+  card.innerHTML=`<button class="danger remove-source" title="Удалить файл">×</button><label>Дополнительный файл</label><input id="file${id}" type="file" accept=".xlsx"/><div id="file${id}status" class="status">Файл не выбран</div><div id="sheet${id}wrap" class="hidden" style="margin-top:10px"><div class="grid2"><div><label>Лист</label><select id="sheet${id}"></select></div><div><label>Строка заголовков</label><input id="headerRow${id}" type="number" min="1" value="1"></div></div></div>`;
+  $('sourceCards').appendChild(card);attachSourceEvents(id);
+  card.querySelector('.remove-source').onclick=()=>{delete state.sources[id];card.remove();refreshAllSelectors();refreshSourcePreview();};
+}
+function attachSourceEvents(id){
+  $('file'+id).addEventListener('change',async e=>{if(e.target.files[0])try{await loadWorkbook(e.target.files[0],id)}catch(err){$('file'+id+'status').textContent=err.message;$('file'+id+'status').className='status err'}});
+  $('sheet'+id).addEventListener('change',()=>{const hr=$('headerRow'+id);if(hr)delete hr.dataset.manual;readSelectedSheet(id);});
+  const hr=$('headerRow'+id);if(hr)hr.addEventListener('change',()=>{hr.dataset.manual='1';readSelectedSheet(id);});
+}
+function renderColumns(){const src=state.sources['1'];if(!src)return;const prev={};document.querySelectorAll('#columnsBody tr').forEach(tr=>{const h=tr.dataset.header;prev[h]={keep:tr.querySelector('.keepCol')?.checked??true,rename:tr.querySelector('.renameCol')?.value||h};});if(!state.columnOrder.length)state.columnOrder=[...src.headers];state.columnOrder=state.columnOrder.filter(h=>src.headers.includes(h));src.headers.forEach(h=>{if(!state.columnOrder.includes(h))state.columnOrder.push(h)});$('columnsBody').innerHTML='';state.columnOrder.forEach(h=>{const idx=src.headers.indexOf(h),p=prev[h]||{keep:true,rename:h},tr=document.createElement('tr');tr.dataset.header=h;tr.innerHTML=`<td class="keepcell"><input type="checkbox" class="keepCol" data-header="${escapeHtml(h)}" ${p.keep?'checked':''}></td><td><span class="letter">${excelCol(idx+1)}</span>${escapeHtml(h)}</td><td><input type="text" class="renameCol" data-header="${escapeHtml(h)}" value="${escapeHtml(p.rename)}"></td><td><div class="order-controls"><button type="button" class="order-btn up">↑</button><button type="button" class="order-btn down">↓</button></div></td>`;$('columnsBody').appendChild(tr);tr.querySelector('.up').onclick=()=>moveColumn(h,-1);tr.querySelector('.down').onclick=()=>moveColumn(h,1);});document.querySelectorAll('.renameCol,.keepCol').forEach(el=>el.addEventListener('change',()=>{refreshAllSelectors();populateLookupInsertAfter();}));populateLookupInsertAfter();}
+function moveColumn(h,d){const i=state.columnOrder.indexOf(h),j=i+d;if(i<0||j<0||j>=state.columnOrder.length)return;[state.columnOrder[i],state.columnOrder[j]]=[state.columnOrder[j],state.columnOrder[i]];renderColumns();refreshAllSelectors();}
+function renamedMap(){const m=new Map();document.querySelectorAll('.renameCol').forEach(inp=>m.set(inp.dataset.header,norm(inp.value)||inp.dataset.header));return m;}
+function fillSelect(sel,items,{includeLogin=false,letters=false,displayMap=null}={}){const old=sel.value;sel.innerHTML='';if(includeLogin)sel.add(new Option('Логины (созданный)','__login__'));items.forEach((h,i)=>{const shown=displayMap?.get(h)||h;sel.add(new Option(`${letters?excelCol(i+1)+' — ':''}${shown}`,h));});if([...sel.options].some(o=>o.value===old))sel.value=old;}
+function availableLookupSources(){return Object.values(state.sources).filter(s=>s.wb);}
+function refreshAllSelectors(){const h1=state.sources['1']?.headers||[];fillSelect($('loginSource'),h1,{letters:true});fillSelect($('key1'),h1,{includeLogin:true,letters:true});populateLookupSourceSelect();populateSummarySelectors();document.querySelectorAll('.filter-field').forEach(s=>fillSelect(s,h1,{includeLogin:true,letters:true}));autoPick('loginSource',['Email','E-mail','email']);if([...$('key1').options].some(o=>o.value==='__login__'))$('key1').value='__login__';document.querySelectorAll('.filter-field').forEach(s=>{if(!s.value&&s.options.length)s.selectedIndex=0;});}
+function populateLookupSourceSelect(){
+  const old=$('lookupSource').value;$('lookupSource').innerHTML='';
+  availableLookupSources().forEach(s=>$('lookupSource').add(new Option(`${sourceLabel(s.id)} — ${s.fileName||''}`,s.id)));
+  if([...$('lookupSource').options].some(o=>o.value===old))$('lookupSource').value=old;
+  populateLookupSheetSelect();
+}
+function populateLookupSheetSelect(){
+  const id=$('lookupSource').value,src=state.sources[id],sel=$('lookupSheet'),old=sel.value;sel.innerHTML='';
+  if(!src?.wb)return;
+  src.wb.worksheets.forEach(ws=>sel.add(new Option(ws.name,ws.name)));
+  if([...sel.options].some(o=>o.value===old))sel.value=old;
+  else if(id==='1'&&src.wb.worksheets.length>1){const alt=src.wb.worksheets.find(w=>w.name!==src.sheetName);if(alt)sel.value=alt.name;}
+  const ws=src.wb.getWorksheet(sel.value);if(ws)$('lookupHeaderRow').value=detectHeaderRow(ws);
+  populateLookupFields();
+}
+function getLookupData(){
+  const id=$('lookupSource').value,src=state.sources[id];if(!src?.wb)return{headers:[],rows:[]};
+  const ws=src.wb.getWorksheet($('lookupSheet').value||src.sheetName);
+  return ws?worksheetToRows(ws,$('lookupHeaderRow').value||1):{headers:[],rows:[]};
+}
+function populateLookupFields(){
+  const d=getLookupData(),h=d.headers||[];
+  ['key2','status2','date2'].forEach(x=>fillSelect($(x),h,{letters:true}));
+  autoPick('key2',['Логин','Логины','login','Login']);
+  autoPick('status2',['Статус курса','Статус прохождения обучения','Статус','status']);
+  autoPick('date2',['Дата назначения / переназначения','Дата назначения','date']);
+}
+function outputFields(){return ['Логины',...[...document.querySelectorAll('#columnsBody tr')].filter(tr=>tr.querySelector('.keepCol')?.checked).map(tr=>tr.querySelector('.renameCol')?.value.trim()||tr.dataset.header),'Статус прохождения обучения','Дата назначения'];}
+function summaryFieldOptions(){
+  const opts=[];outputFields().forEach(x=>opts.push({value:'out::'+x,label:'Итоговое поле — '+x}));
+  const src=state.sources['1'];(src?.headers||[]).forEach((h,i)=>opts.push({value:'src::'+h,label:`Исходный ${excelCol(i+1)} — ${h}`}));
+  return opts;
+}
+function summaryValue(row,field){
+  if(field?.startsWith('src::'))return row.__source?.[field.slice(5)];
+  if(field?.startsWith('out::'))return row[field.slice(5)];
+  return row[field]!==undefined?row[field]:row.__source?.[field];
+}
+function summaryFieldLabel(field){
+  if(field?.startsWith('src::'))return field.slice(5);
+  if(field?.startsWith('out::'))return field.slice(5);
+  return field||'';
+}
+function smartSummaryField(label,sourceFallback){
+  const src=state.sources['1'];
+  if(sourceFallback&&(src?.headers||[]).includes(sourceFallback))return 'src::'+sourceFallback;
+  if(outputFields().includes(label))return 'out::'+label;
+  return summaryFieldOptions()[0]?.value||'';
+}
+function defaultSummaryLevels(){return [
+  {field:smartSummaryField('Макрорегион','Уровень 3'),color:'#D9EAF7',bold:true},
+  {field:smartSummaryField('Регион','Уровень 4'),color:'#EAF2F8',bold:true},
+  {field:smartSummaryField('Регион / Территория','Уровень 5'),color:'#F2F7FC',bold:false},
+  {field:smartSummaryField('Объект','Уровень 6'),color:'#FFFFFF',bold:false}
+];}
+function ensureSummaryLevels(){if(!state.summaryLevels||!state.summaryLevels.length)state.summaryLevels=defaultSummaryLevels();}
+function migrateSummaryLevels(){
+  if(!state.summaryLevels)return;
+  const src=state.sources['1'];if(!src)return;
+  const ozon={ 'Макрорегион':'Уровень 3','Регион':'Уровень 4','Регион / Территория':'Уровень 5','Объект':'Уровень 6'};
+  state.summaryLevels=state.summaryLevels.map(l=>{let f=l.field;if(!String(f).includes('::')){const raw=ozon[f];if(raw&&src.headers.includes(raw))f='src::'+raw;else if(outputFields().includes(f))f='out::'+f;}return {...l,field:f};});
+}
+function renderSummaryLevels(){
+  ensureSummaryLevels();migrateSummaryLevels();const opts=summaryFieldOptions(),box=$('summaryLevels');box.innerHTML='';
+  state.summaryLevels.forEach((lvl,i)=>{const row=document.createElement('div');row.className='summary-level-row';row.innerHTML=`<div style="text-align:center;color:#667085">${i+1}</div><select class="lvlField"></select><input class="lvlColor" type="color" value="${lvl.color||'#FFFFFF'}"><select class="lvlBold"><option value="no">Обычный</option><option value="yes">Жирный</option></select><button type="button" class="danger lvlRemove">×</button>`;const sel=row.querySelector('.lvlField');opts.forEach(o=>sel.add(new Option(o.label,o.value)));if(opts.some(o=>o.value===lvl.field))sel.value=lvl.field;row.querySelector('.lvlBold').value=lvl.bold?'yes':'no';sel.onchange=()=>state.summaryLevels[i].field=sel.value;row.querySelector('.lvlColor').onchange=e=>state.summaryLevels[i].color=e.target.value;row.querySelector('.lvlBold').onchange=e=>state.summaryLevels[i].bold=e.target.value==='yes';row.querySelector('.lvlRemove').onclick=()=>{state.summaryLevels.splice(i,1);renderSummaryLevels()};box.appendChild(row);});
+  const src=state.sources['1'];if($('summarySourceHint')){const parts=[];[['Макрорегион','Уровень 3'],['Регион','Уровень 4'],['Регион / Территория','Уровень 5'],['Объект','Уровень 6']].forEach(([a,b])=>{if(src?.headers?.includes(b))parts.push(`${a} ← ${b}`)});$('summarySourceHint').innerHTML=parts.length?'<b>Распознана структура текущей выгрузки:</b> '+parts.join(' · '):'<b>Подсказка:</b> можно выбирать как итоговые, так и исходные столбцы Таблицы 1.';}
+}
+function populateSummarySelectors(){renderSummaryLevels();const fields=outputFields(),old=$('summaryColumnField')?.value;if($('summaryColumnField')){fillSelect($('summaryColumnField'),fields);if(fields.includes(old))$('summaryColumnField').value=old;else if(fields.includes('Статус прохождения обучения'))$('summaryColumnField').value='Статус прохождения обучения';}}
+function autoPick(id,cands){const s=$(id);if(!s?.options.length)return;if(s.value)return;for(const c of cands){const o=[...s.options].find(x=>keyNorm(x.value)===keyNorm(c));if(o){s.value=o.value;return;}}}
+function addFilter(rule={field:'',op:'eq',value:''}){$('noFilters').classList.add('hidden');const row=document.createElement('div');row.className='filter-row';row.innerHTML=`<div class="priority"></div><select class="filter-field"></select><select class="filter-op"><option value="eq">равно</option><option value="neq">не равно</option><option value="contains">содержит</option><option value="notcontains">не содержит</option><option value="starts">начинается с</option><option value="empty">пусто</option><option value="notempty">не пусто</option></select><input class="filter-value" type="text" placeholder="Значение"><div class="filter-actions"><button class="ghost move-up">↑</button><button class="ghost move-down">↓</button></div><button class="danger filter-remove">Удалить</button>`;$('filters').appendChild(row);fillSelect(row.querySelector('.filter-field'),state.sources['1']?.headers||[],{includeLogin:true,letters:true});if(rule.field&&[...row.querySelector('.filter-field').options].some(o=>o.value===rule.field))row.querySelector('.filter-field').value=rule.field;row.querySelector('.filter-op').value=rule.op||'eq';row.querySelector('.filter-value').value=rule.value||'';toggleFilterValue(row);row.querySelector('.filter-op').onchange=()=>toggleFilterValue(row);row.querySelector('.filter-remove').onclick=()=>{row.remove();renumberFilters();if(!$('filters').children.length)$('noFilters').classList.remove('hidden');};row.querySelector('.move-up').onclick=()=>moveFilter(row,-1);row.querySelector('.move-down').onclick=()=>moveFilter(row,1);renumberFilters();}
+function moveFilter(row,dir){const parent=$('filters');if(dir<0&&row.previousElementSibling)parent.insertBefore(row,row.previousElementSibling);else if(dir>0&&row.nextElementSibling)parent.insertBefore(row.nextElementSibling,row);renumberFilters();}
+function renumberFilters(){[...$('filters').children].forEach((r,i)=>r.querySelector('.priority').textContent=`№${i+1}`);}
+function toggleFilterValue(row){const op=row.querySelector('.filter-op').value;row.querySelector('.filter-value').disabled=['empty','notempty'].includes(op);}
+function getLogin(row,config){const raw=norm(row[config.loginSource]);return config.loginRule==='beforeAt'?raw.split('@')[0]:raw;}
+function getValueForField(row,field,config){return field==='__login__'?getLogin(row,config):row[field];}
+function isBlankToken(v){const s=norm(v).toLowerCase();return s===''||['(пустые)','(пусто)','пустые','пусто','(blank)','(blanks)'].includes(s);}
+function ruleMatches(row,rule,config){
+  const raw=getValueForField(row,rule.field,config),a=keyNorm(raw);
+  let b=keyNorm(rule.value);if(isBlankToken(rule.value))b='';
+  switch(rule.op){
+    case'eq':return a===b;
+    case'neq':return a!==b;
+    case'contains':return a.includes(b);
+    case'notcontains':return !a.includes(b);
+    case'starts':return a.startsWith(b);
+    case'empty':return isBlankToken(raw);
+    case'notempty':return !isBlankToken(raw);
+    default:return false;
+  }
+}
+function renderLookupNewColumnsOrder(){
+  if(!state.lookupNewColumnsOrder?.length)state.lookupNewColumnsOrder=['Статус прохождения обучения','Дата назначения'];
+  const box=$('lookupNewColumnsOrder');if(!box)return;box.innerHTML='';state.lookupNewColumnsOrder.forEach((name,i)=>{const row=document.createElement('div');row.className='lookup-order-row';row.innerHTML=`<div>${escapeHtml(name)}</div><div class="lookup-order-actions"><button type="button" class="ghost new-up">↑</button><button type="button" class="ghost new-down">↓</button></div>`;row.querySelector('.new-up').onclick=()=>moveLookupNewColumn(i,-1);row.querySelector('.new-down').onclick=()=>moveLookupNewColumn(i,1);box.appendChild(row);});populateLookupInsertAfter();}
+function moveLookupNewColumn(i,d){const j=i+d;if(j<0||j>=state.lookupNewColumnsOrder.length)return;[state.lookupNewColumnsOrder[i],state.lookupNewColumnsOrder[j]]=[state.lookupNewColumnsOrder[j],state.lookupNewColumnsOrder[i]];renderLookupNewColumnsOrder();}
+function populateLookupInsertAfter(){const sel=$('lookupInsertAfter');if(!sel)return;const old=sel.value;sel.innerHTML='';sel.add(new Option('В конце итоговой таблицы','__end__'));sel.add(new Option('В самом начале','__start__'));sel.add(new Option('После «Логины»','__login__'));const map=renamedMap();state.columnOrder.forEach(h=>{const tr=[...document.querySelectorAll('#columnsBody tr')].find(x=>x.dataset.header===h);if(tr?.querySelector('.keepCol')?.checked){const label=map.get(h)||h;sel.add(new Option('После «'+label+'»','out::'+label));}});if([...sel.options].some(o=>o.value===old))sel.value=old;else sel.value='__end__';}
+function finalHeaders(config,kept){const base=['Логины',...kept.map(x=>x.rename||x.source)],news=[...(config.lookupNewColumnsOrder||['Статус прохождения обучения','Дата назначения'])];const pos=config.lookupInsertAfter||'__end__';if(pos==='__start__')return [...news,...base];if(pos==='__end__')return [...base,...news];let idx=0;if(pos==='__login__')idx=base.indexOf('Логины');else if(pos.startsWith('out::'))idx=base.indexOf(pos.slice(5));if(idx<0)return [...base,...news];return [...base.slice(0,idx+1),...news,...base.slice(idx+1)];}
+
+function safeLookupData(){try{return getLookupData()||{headers:[],rows:[]};}catch(e){return{headers:[],rows:[]};}}
+function addLookupCondition(data={left:'',right:''}){
+  const host=$('lookupConditions');if(!host)return;
+  const row=document.createElement('div');row.className='lookup-condition-row';
+  row.innerHTML=`<div><label>Поле основной таблицы</label><select class="lc-left"></select></div><div class="eq">=</div><div><label>Поле источника</label><select class="lc-right"></select></div><button type="button" class="danger lc-remove">×</button>`;
+  const l=row.querySelector('.lc-left'),r=row.querySelector('.lc-right');
+  const leftFields=['__login__',...(state.sources['1']?.headers||[])];fillSelect(l,leftFields,{letters:true});if(l.options.length&&l.options[0].value==='__login__')l.options[0].textContent='Логины (созданный столбец)';
+  fillSelect(r,safeLookupData().headers||[],{letters:true});
+  if([...l.options].some(o=>o.value===data.left))l.value=data.left;if([...r.options].some(o=>o.value===data.right))r.value=data.right;
+  row.querySelector('.lc-remove').onclick=()=>row.remove();host.appendChild(row);
+}
+function getLookupConditions(){return[...document.querySelectorAll('#lookupConditions .lookup-condition-row')].map(row=>({left:row.querySelector('.lc-left').value,right:row.querySelector('.lc-right').value})).filter(x=>x.left&&x.right);}
+function refreshLookupConditions(){const saved=getLookupConditions();$('lookupConditions').innerHTML='';saved.forEach(addLookupCondition);}
+function addPostLookupFilter(data){
+  try{
+    data=data||{field:'Статус прохождения обучения',op:'eq',value:'Заблокирована УЗ в LMS'};
+    const host=document.getElementById('postLookupFilters');
+    if(!host)throw new Error('Не найден контейнер фильтров после ВПР.');
+
+    const row=document.createElement('div');
+    row.className='post-lookup-filter-row';
+
+    const fieldWrap=document.createElement('div');
+    fieldWrap.innerHTML='<label>Поле результата</label>';
+    const field=document.createElement('select');
+    field.className='pl-field';
+
+    // These two fields are always created by Block 5.
+    const fields=['Статус прохождения обучения','Дата назначения'];
+
+    // Add current final-output fields without relying on outputFields().
+    const login='Логины';
+    if(!fields.includes(login))fields.unshift(login);
+    document.querySelectorAll('#columnsBody tr').forEach(tr=>{
+      try{
+        const keep=tr.querySelector('.keepCol');
+        const rename=tr.querySelector('.renameCol');
+        if(keep&&keep.checked){
+          const name=(rename?.value||tr.dataset.header||'').trim();
+          if(name&&!fields.includes(name))fields.push(name);
+        }
+      }catch(e){}
+    });
+
+    fields.forEach(name=>field.add(new Option(name,name)));
+    if(fields.includes(data.field))field.value=data.field;
+    else field.value='Статус прохождения обучения';
+    fieldWrap.appendChild(field);
+
+    const opWrap=document.createElement('div');
+    opWrap.innerHTML='<label>Условие</label>';
+    const op=document.createElement('select');
+    op.className='pl-op';
+    [
+      ['eq','равно'],['neq','не равно'],['contains','содержит'],
+      ['notcontains','не содержит'],['empty','пусто'],['notempty','не пусто']
+    ].forEach(([v,label])=>op.add(new Option(label,v)));
+    op.value=data.op||'eq';
+    opWrap.appendChild(op);
+
+    const valueWrap=document.createElement('div');
+    valueWrap.innerHTML='<label>Значение</label>';
+    const value=document.createElement('input');
+    value.className='pl-value';
+    value.value=data.value||'';
+    valueWrap.appendChild(value);
+
+    const remove=document.createElement('button');
+    remove.type='button';
+    remove.className='danger pl-remove';
+    remove.textContent='×';
+    remove.title='Удалить фильтр';
+    remove.onclick=()=>row.remove();
+
+    row.append(fieldWrap,opWrap,valueWrap,remove);
+    host.appendChild(row);
+
+    const status=document.getElementById('buildStatus');
+    if(status && status.classList.contains('err')){
+      status.textContent='';
+      status.className='status';
+    }
+  }catch(err){
+    console.error('Ошибка добавления фильтра после ВПР:',err);
+    const status=document.getElementById('buildStatus');
+    if(status){
+      status.textContent='Ошибка добавления фильтра: '+(err.message||String(err));
+      status.className='status err';
+    }else{
+      alert('Ошибка добавления фильтра: '+(err.message||String(err)));
+    }
+  }
+}
+function clearPostLookupFiltersSafe(){
+  const host=document.getElementById('postLookupFilters');
+  if(host)host.innerHTML='';
+}
+function getPostLookupFilters(){
+  const host=document.getElementById('postLookupFilters');
+  if(!host)return[];
+  return [...host.querySelectorAll('.post-lookup-filter-row')].map(row=>({
+    field:row.querySelector('.pl-field')?.value||'',
+    op:row.querySelector('.pl-op')?.value||'eq',
+    value:row.querySelector('.pl-value')?.value||''
+  })).filter(x=>x.field);
+}
+function textNorm(v){return norm(v).toLowerCase();}
+function postLookupFilterMatches(row,rule){
+  const raw=row?.[rule.field]??'';
+  const a=String(raw??'').trim().toLowerCase();
+  const b=String(rule.value??'').trim().toLowerCase();
+  switch(rule.op){
+    case'eq':return a===b;
+    case'neq':return a!==b;
+    case'contains':return a.includes(b);
+    case'notcontains':return !a.includes(b);
+    case'empty':return a==='';
+    case'notempty':return a!=='';
+    default:return false;
+  }
+}
+function collectConfig(){const columns=[...document.querySelectorAll('.keepCol')].map(cb=>{const src=cb.dataset.header,inp=[...document.querySelectorAll('.renameCol')].find(x=>x.dataset.header===src);return{source:src,keep:cb.checked,rename:norm(inp?.value)||src};}),filters=[...$('filters').children].map((row,i)=>({field:row.querySelector('.filter-field').value,op:row.querySelector('.filter-op').value,value:row.querySelector('.filter-value').value,priority:i}));ensureSummaryLevels();return{version:6,columnOrder:[...state.columnOrder],lookupNewColumnsOrder:[...state.lookupNewColumnsOrder],lookupInsertAfter:$('lookupInsertAfter')?.value||'__end__',columns,loginSource:$('loginSource').value,loginRule:$('loginRule').value,filters,lookupConditions:getLookupConditions(),postLookupFilters:getPostLookupFilters(),useLookup:$('useLookup').checked,lookupSource:$('lookupSource').value,lookupSheet:$('lookupSheet').value,lookupHeaderRow:Number($('lookupHeaderRow').value)||1,key1:$('key1').value,key2:$('key2').value,status2:$('status2').value,date2:$('date2').value,unmatchedStatus:$('unmatchedStatus')?.value||'Заблокирована УЗ в LMS',useUnmatchedStatus:$('useUnmatchedStatus')?.value||'yes',summaryLevels:state.summaryLevels.map(x=>({...x})),summaryColumnField:$('summaryColumnField').value,summarySortMode:$('summarySortMode').value,summaryShowBlanks:$('summaryShowBlanks').value,summaryGrandTotal:$('summaryGrandTotal').value,completedStatus:$('completedStatus').value,statusOrder:$('statusOrder').value,style:{mainHeader:$('styleMainHeader').value,summaryHeader:$('styleSummaryHeader').value,altRow:$('styleAltRow').value,totalRow:$('styleTotalRow').value,border:$('styleBorder').value,kpi:$('styleKpi').value,boldHeaders:$('styleBoldHeaders').checked,borders:$('styleBorders').checked,alternating:$('styleAlternating').checked,headerHeight:Number($('styleHeaderHeight').value)||22,summaryFirstColWidth:Number($('styleSummaryFirstColWidth').value)||38,indentPerLevel:Number($('styleIndentPerLevel').value)||1}};}
+function applyConfig(c){if(!c)return;if(c.lookupNewColumnsOrder?.length)state.lookupNewColumnsOrder=[...c.lookupNewColumnsOrder];if(c.columnOrder?.length)state.columnOrder=[...c.columnOrder];renderColumns();if(c.columns)c.columns.forEach(x=>{const cb=[...document.querySelectorAll('.keepCol')].find(e=>e.dataset.header===x.source);if(cb){cb.checked=x.keep;const inp=[...document.querySelectorAll('.renameCol')].find(e=>e.dataset.header===x.source);if(inp)inp.value=x.rename||x.source;}});if(c.summaryLevels?.length)state.summaryLevels=c.summaryLevels.map(x=>({...x}));else if(Array.isArray(c.summary))state.summaryLevels=c.summary.filter(Boolean).map((field,i)=>({field,color:defaultSummaryLevels()[i]?.color||'#FFFFFF',bold:i<2}));populateSummarySelectors();renderLookupNewColumnsOrder();setIfExists('lookupInsertAfter',c.lookupInsertAfter);setIfExists('loginSource',c.loginSource);setIfExists('loginRule',c.loginRule);if(c.useLookup!==undefined)$('useLookup').checked=!!c.useLookup;setIfExists('lookupSource',c.lookupSource);populateLookupSheetSelect();setIfExists('lookupSheet',c.lookupSheet);if(c.lookupHeaderRow)$('lookupHeaderRow').value=c.lookupHeaderRow;populateLookupFields();setIfExists('key1',c.key1);setIfExists('key2',c.key2);setIfExists('status2',c.status2);setIfExists('date2',c.date2);if(c.unmatchedStatus!==undefined&&$('unmatchedStatus'))$('unmatchedStatus').value=c.unmatchedStatus;if(c.useUnmatchedStatus!==undefined&&$('useUnmatchedStatus'))$('useUnmatchedStatus').value=c.useUnmatchedStatus;setIfExists('summaryColumnField',c.summaryColumnField||'Статус прохождения обучения');setIfExists('summarySortMode',c.summarySortMode||'source');setIfExists('summaryShowBlanks',c.summaryShowBlanks||'yes');setIfExists('summaryGrandTotal',c.summaryGrandTotal||'yes');if(c.completedStatus)$('completedStatus').value=c.completedStatus;if(c.statusOrder)$('statusOrder').value=c.statusOrder;if(c.style){[['styleMainHeader','mainHeader'],['styleSummaryHeader','summaryHeader'],['styleAltRow','altRow'],['styleTotalRow','totalRow'],['styleBorder','border'],['styleKpi','kpi'],['styleHeaderHeight','headerHeight'],['styleSummaryFirstColWidth','summaryFirstColWidth'],['styleIndentPerLevel','indentPerLevel']].forEach(([id,key])=>{if(c.style[key]!=null)$(id).value=c.style[key]});if(c.style.boldHeaders!=null)$('styleBoldHeaders').checked=!!c.style.boldHeaders;if(c.style.borders!=null)$('styleBorders').checked=!!c.style.borders;if(c.style.alternating!=null)$('styleAlternating').checked=!!c.style.alternating;}$('filters').innerHTML='';(c.filters||[]).sort((a,b)=>(a.priority||0)-(b.priority||0)).forEach(addFilter);if(!(c.filters||[]).length)$('noFilters').classList.remove('hidden');$('lookupConditions').innerHTML='';(c.lookupConditions||[]).forEach(addLookupCondition);$('postLookupFilters').innerHTML='';(c.postLookupFilters||[]).forEach(addPostLookupFilter);}
+function setIfExists(id,val){const el=$(id);if(!el||val==null)return;if(el.tagName==='SELECT'){if([...el.options].some(o=>o.value===val))el.value=val;}else el.value=val;}
+function saveProfile(){localStorage.setItem('trainingReportProfileV2',JSON.stringify(collectConfig()));$('profileStatus').textContent='Настройки сохранены в браузере.';$('profileStatus').className='status ok';}
+function applySavedProfile(){try{const c=JSON.parse(localStorage.getItem('trainingReportProfileV2')||'null');if(c){applyConfig(c);$('profileStatus').textContent='Сохраненные настройки применены.';$('profileStatus').className='status ok';}}catch(e){}}
+function cleanRowsSequential(rows,config){let current=[...rows],stats=[];for(const rule of config.filters){const before=current.length;current=current.filter(r=>!ruleMatches(r,rule,config));stats.push({rule,removed:before-current.length,left:current.length});}return{rows:current,removed:rows.length-current.length,stats};}
+function deriveOutputRows(config){
+  const base=state.sources['1'];if(!base)throw new Error('Загрузи основной файл.');
+  const cleaned=cleanRowsSequential(base.rows,config),out=[];let matched=0,unmatched=0,postLookupRemoved=0,map=new Map();
+  if(config.useLookup){
+    const src=state.sources[config.lookupSource];if(!src?.wb)throw new Error('Выбери файл-источник для сопоставления.');
+    const ws=src.wb.getWorksheet(config.lookupSheet||src.sheetName);if(!ws)throw new Error('Выбери лист-источник.');
+    const lookup=worksheetToRows(ws,config.lookupHeaderRow||1);
+    lookup.rows.forEach(r=>{const parts=[keyNorm(r[config.key2]),...(config.lookupConditions||[]).map(c=>keyNorm(r[c.right]))],k=parts.join('¦');if(parts[0]&&!map.has(k))map.set(k,r);});
+  }
+  for(const r of cleaned.rows){
+    const login=getLogin(r,config),baseKey=keyNorm(config.key1==='__login__'?login:r[config.key1]),k=[baseKey,...(config.lookupConditions||[]).map(c=>keyNorm(c.left==='__login__'?login:r[c.left]))].join('¦'),r2=config.useLookup?map.get(k):null;
+    if(config.useLookup){if(r2)matched++;else unmatched++;}
+    const obj={'Логины':login};
+    const cmap=new Map(config.columns.map(x=>[x.source,x]));(config.columnOrder||config.columns.map(x=>x.source)).map(h=>cmap.get(h)).filter(Boolean).filter(x=>x.keep).forEach(x=>obj[x.rename||x.source]=r[x.source]);
+    obj['Статус прохождения обучения']=config.useLookup?(r2?excelValue(r2[config.status2]):(config.useUnmatchedStatus==='yes'?(config.unmatchedStatus||'Заблокирована УЗ в LMS'):'')):(r['Статус прохождения обучения']??'');
+    obj['Дата назначения']=config.useLookup?(r2?excelValue(r2[config.date2]):''):(r['Дата назначения']??'');
+    if((config.postLookupFilters||[]).some(rule=>postLookupFilterMatches(obj,rule))){postLookupRemoved++;continue;}
+    obj.__source=r;out.push(obj);
+  }
+  return{rows:out,removed:cleaned.removed,filterStats:cleaned.stats,matched,unmatched,postLookupRemoved,fallbackApplied:(config.useLookup&&config.useUnmatchedStatus==='yes'?unmatched:0)};
+}
+function statusName(v){const s=norm(v);return s===''?'(пусто)':s;}
+function buildHierarchy(rows,fields,statuses,config,level=0){if(!fields.length)return[];const field=fields[level],groups=new Map();rows.forEach(r=>{const v=norm(summaryValue(r,field))||'(пусто)';if(config.summaryShowBlanks==='no'&&v==='(пусто)')return;if(!groups.has(v))groups.set(v,[]);groups.get(v).push(r);});let entries=[...groups.entries()];if(config.summarySortMode==='alpha')entries.sort((a,b)=>a[0].localeCompare(b[0],'ru'));if(config.summarySortMode==='countdesc')entries.sort((a,b)=>b[1].length-a[1].length);const nodes=[];for(const[name,rs]of entries){const counts={};statuses.forEach(s=>counts[s]=0);rs.forEach(r=>{const s=statusName(r[config.summaryColumnField||'Статус прохождения обучения']);if(counts[s]==null)counts[s]=0;counts[s]++;});const node={name,rows:rs,counts,total:rs.length,level,children:[]};if(level<fields.length-1)node.children=buildHierarchy(rs,fields,statuses,config,level+1);nodes.push(node);}return nodes;}
+function flattenNodes(nodes,arr=[]){nodes.forEach(n=>{arr.push(n);flattenNodes(n.children,arr)});return arr;}
+function resultModel(){const config=collectConfig(),res=deriveOutputRows(config),outRows=res.rows,summaryField=config.summaryColumnField||'Статус прохождения обучения',requested=config.statusOrder.split(';').map(norm).filter(Boolean),seen=[...new Set(outRows.map(r=>statusName(r[summaryField])))],statuses=[...requested];seen.forEach(s=>{if(!statuses.includes(s))statuses.push(s)});if(config.summaryShowBlanks==='no'){const i=statuses.indexOf('(пусто)');if(i>=0)statuses.splice(i,1);}const fields=(config.summaryLevels||[]).map(x=>x.field).filter(Boolean),nodes=flattenNodes(buildHierarchy(outRows,fields,statuses,config)),completed=norm(config.completedStatus),completedCount=outRows.filter(r=>statusName(r['Статус прохождения обучения'])===completed).length;return{config,res,outRows,statuses,fields,nodes,completedCount,summaryField};}
+function hexArgb(hex){return 'FF'+String(hex||'#FFFFFF').replace('#','').toUpperCase();}
+function applyHeaderStyle(row,fill='#D9EAF7',config=null){row.eachCell(c=>{c.font={bold:config?.style?.boldHeaders!==false};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:hexArgb(fill)}};if(config?.style?.borders!==false)c.border={bottom:{style:'thin',color:{argb:hexArgb(config?.style?.border||'#B4C6E7')}}};c.alignment={vertical:'middle'};});}
+function formatDateCell(cell){if(cell.value instanceof Date)cell.numFmt='dd.mm.yyyy';}
+async function buildReport(){if(!state.sources['1'])return;const m=resultModel(),{config,res,outRows,statuses,nodes,completedCount,summaryField}=m;if(config.useLookup&&(!config.lookupSheet||!config.key2||!config.status2||!config.date2))throw new Error('Заполни настройки сопоставления: лист, ключ, статус и дату.');$('buildStatus').textContent='Формирую отчет…';$('buildStatus').className='status';const wb=new ExcelJS.Workbook();wb.creator='Конструктор отчетов по обучению';wb.created=new Date();const ws=wb.addWorksheet('Сотрудники');const cmap2=new Map(config.columns.map(x=>[x.source,x])),kept=(config.columnOrder||config.columns.map(x=>x.source)).map(h=>cmap2.get(h)).filter(Boolean).filter(x=>x.keep),headers=finalHeaders(config,kept);ws.addRow(headers);applyHeaderStyle(ws.getRow(1),config.style.mainHeader,config);ws.getRow(1).height=config.style.headerHeight;outRows.forEach((o,ri)=>{const vals=headers.map(h=>o[h]??'');const row=ws.addRow(vals);row.eachCell(formatDateCell);if(config.style.alternating&&ri%2===1)row.eachCell(c=>c.fill={type:'pattern',pattern:'solid',fgColor:{argb:hexArgb(config.style.altRow)}});if(config.style.borders)row.eachCell(c=>c.border={bottom:{style:'hair',color:{argb:hexArgb(config.style.border)}}});});ws.autoFilter={from:{row:1,column:1},to:{row:Math.max(1,ws.rowCount),column:headers.length}};headers.forEach((h,i)=>{let max=Math.min(38,Math.max(10,h.length+2));for(let r=2;r<=Math.min(ws.rowCount,400);r++)max=Math.min(38,Math.max(max,norm(ws.getCell(r,i+1).value).length+2));ws.getColumn(i+1).width=max;});const sws=wb.addWorksheet('Сводная');sws.getCell('A3').value=`Количество по полю ${summaryField}`;sws.getCell('B3').value='Названия столбцов ▼';sws.getCell('A4').value='Названия строк ▼';statuses.forEach((s,i)=>sws.getCell(4,i+2).value=s);if(config.summaryGrandTotal==='yes')sws.getCell(4,statuses.length+2).value='Общий итог';applyHeaderStyle(sws.getRow(3),config.style.summaryHeader,config);applyHeaderStyle(sws.getRow(4),config.style.summaryHeader,config);let rr=5;nodes.forEach(n=>{const row=sws.getRow(rr++);row.getCell(1).value=n.name;const lvl=(config.summaryLevels||[])[n.level]||{};row.getCell(1).alignment={indent:Math.max(0,n.level*(config.style.indentPerLevel||1))};row.font={bold:!!lvl.bold};if(lvl.color)row.getCell(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:hexArgb(lvl.color)}};statuses.forEach((s,i)=>{const v=n.counts[s]||0;row.getCell(i+2).value=v||'';});if(config.summaryGrandTotal==='yes')row.getCell(statuses.length+2).value=n.total;});const totalRow=sws.getRow(rr);if(config.summaryGrandTotal==='yes'){totalRow.getCell(1).value='Общий итог';totalRow.font={bold:true};statuses.forEach((s,i)=>{const v=outRows.filter(r=>statusName(r[summaryField])===s).length;totalRow.getCell(i+2).value=v||'';});totalRow.getCell(statuses.length+2).value=outRows.length;applyHeaderStyle(totalRow,config.style.totalRow,config);}sws.getColumn(1).width=config.style.summaryFirstColWidth;for(let i=2;i<=statuses.length+2;i++)sws.getColumn(i).width=Math.max(12,Math.min(28,(sws.getCell(4,i).value||'').toString().length+2));const kpiCol=statuses.length+4,kpiValCol=kpiCol+1,inProgress=outRows.filter(r=>statusName(r['Статус прохождения обучения'])==='В процессе').length,notStarted=outRows.filter(r=>statusName(r['Статус прохождения обучения'])==='Не начат').length,kpis=[['Назначено всего',outRows.length],['Завершен',completedCount],['В процессе',inProgress],['Не начат',notStarted],['Процент обученности',outRows.length?completedCount/outRows.length:0]];kpis.forEach((kv,i)=>{sws.getCell(6+i,kpiCol).value=kv[0];sws.getCell(6+i,kpiValCol).value=kv[1];});sws.getCell(10,kpiValCol).numFmt='0.00%';sws.getColumn(kpiCol).width=24;sws.getColumn(kpiValCol).width=15;for(let r=6;r<=10;r++){sws.getCell(r,kpiCol).font={bold:r===6||r===10};sws.getCell(r,kpiCol).fill={type:'pattern',pattern:'solid',fgColor:{argb:hexArgb(config.style.kpi)}};sws.getCell(r,kpiValCol).font={bold:true};}const summaryEndRow=config.summaryGrandTotal==='yes'?totalRow.number:Math.max(4,rr-1),summaryEndCol=statuses.length+(config.summaryGrandTotal==='yes'?2:1);sws.autoFilter={from:{row:4,column:1},to:{row:summaryEndRow,column:summaryEndCol}};sws.getCell('B3').fill={type:'pattern',pattern:'solid',fgColor:{argb:hexArgb(config.style.summaryHeader)}};sws.getCell('B3').font={bold:true};
+for(let r=3;r<=summaryEndRow;r++){for(let c=1;c<=summaryEndCol;c++){const cell=sws.getCell(r,c);if(config.style.borders)cell.border={top:{style:'thin',color:{argb:hexArgb(config.style.border)}},bottom:{style:'thin',color:{argb:hexArgb(config.style.border)}},left:{style:'thin',color:{argb:hexArgb(config.style.border)}},right:{style:'thin',color:{argb:hexArgb(config.style.border)}}};if(config.style.alternating&&r>=5&&r<rr&&r%2===1&&c>1)cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:hexArgb(config.style.altRow)}};}}
+const buffer=await wb.xlsx.writeBuffer(),blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Готовый отчет по обучению.xlsx';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);showResultModel(m);$('buildStatus').textContent=`Готово. Исходно: ${state.sources['1'].rows.length}; удалено фильтрами: ${res.removed}; в отчете: ${outRows.length}; сопоставлено: ${res.matched}; не найдено: ${res.unmatched}; статус для ненайденных присвоен: ${res.fallbackApplied||0}; удалено после ВПР: ${res.postLookupRemoved||0}.`;$('buildStatus').className='status ok';}
+function showResultModel(m){state.lastResult=m;const{res,outRows,completedCount,statuses,nodes}=m;const metrics=$('metrics');metrics.classList.remove('hidden');metrics.innerHTML=`<div class="metric">Назначено всего<b>${outRows.length}</b></div><div class="metric">Завершен<b>${completedCount}</b></div><div class="metric">Не найдено в источнике<b>${res.unmatched}</b></div><div class="metric">Удалено после ВПР<b>${res.postLookupRemoved||0}</b></div><div class="metric">Присвоено «Заблокирована УЗ»<b>${res.fallbackApplied||0}</b></div><div class="metric">Обученность<b>${outRows.length?(completedCount/outRows.length*100).toFixed(2):'0.00'}%</b></div>`;$('filterStats').innerHTML=res.filterStats.length?res.filterStats.map((s,i)=>`Правило №${i+1}: удалено ${s.removed}, осталось ${s.left}`).join(' · '):'';renderResultPreview(m);}
+function renderTable(box,headers,rows,maxRows=100){if(!headers.length){box.innerHTML='<div class="notice">Нет данных для просмотра.</div>';return;}let html='<table><thead><tr>'+headers.map((h,i)=>`<th><span class="letter">${excelCol(i+1)}</span>${escapeHtml(h)}</th>`).join('')+'</tr></thead><tbody>';rows.slice(0,maxRows).forEach(r=>{html+='<tr>'+headers.map(h=>`<td>${escapeHtml(formatPreviewValue(r[h]))}</td>`).join('')+'</tr>';});html+='</tbody></table>';box.innerHTML=html;}
+function formatPreviewValue(v){if(v instanceof Date)return v.toLocaleDateString('ru-RU');return norm(v);}
+function refreshSourcePreview(){const sel=$('previewSourceSelect');const old=sel.value;sel.innerHTML='';Object.values(state.sources).filter(s=>s.wb).forEach(s=>sel.add(new Option(`${sourceLabel(s.id)} — ${s.fileName}`,s.id)));if([...sel.options].some(o=>o.value===old))sel.value=old;else if(sel.options.length)sel.selectedIndex=0;renderSelectedSourcePreview();}
+function renderSelectedSourcePreview(){const src=state.sources[$('previewSourceSelect').value];if(!src){$('sourcePreviewBox').innerHTML='<div class="notice">Загрузи файл для просмотра.</div>';return;}renderTable($('sourcePreviewBox'),src.headers,src.rows);}
+function renderResultPreview(m){const cmap3=new Map(m.config.columns.map(x=>[x.source,x])),kept=(m.config.columnOrder||m.config.columns.map(x=>x.source)).map(h=>cmap3.get(h)).filter(Boolean).filter(x=>x.keep),headers=finalHeaders(m.config,kept);renderTable($('resultPreviewBox'),headers,m.outRows);const sHeaders=['Названия строк',...m.statuses,'Общий итог'],sRows=m.nodes.map(n=>{const o={'Названия строк':'　'.repeat(n.level)+n.name};m.statuses.forEach(s=>o[s]=n.counts[s]||'');o['Общий итог']=n.total;return o;});renderTable($('summaryPreviewBox'),sHeaders,sRows,300);}
+function refreshResult(){try{showResultModel(resultModel());$('buildStatus').textContent='Предпросмотр обновлен. Файл еще не скачан.';$('buildStatus').className='status ok';}catch(err){$('buildStatus').textContent='Ошибка предпросмотра: '+err.message;$('buildStatus').className='status err';}}
+function downloadJson(obj,name){const b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+$('addSummaryLevel').onclick=()=>{ensureSummaryLevels();state.summaryLevels.push({field:outputFields()[0]||'',color:'#FFFFFF',bold:false});renderSummaryLevels();};$('resetSummaryLevels').onclick=()=>{state.summaryLevels=defaultSummaryLevels();renderSummaryLevels();};$('resetStyle').onclick=()=>{$('styleMainHeader').value='#DCE6F1';$('styleSummaryHeader').value='#D9EAF7';$('styleAltRow').value='#F2F7FC';$('styleTotalRow').value='#E2F0D9';$('styleBorder').value='#B4C6E7';$('styleKpi').value='#F3F4F6';$('styleBoldHeaders').checked=true;$('styleBorders').checked=true;$('styleAlternating').checked=true;$('styleHeaderHeight').value=22;$('styleSummaryFirstColWidth').value=38;$('styleIndentPerLevel').value=1;};renderLookupNewColumnsOrder();attachSourceEvents('1');attachSourceEvents('2');$('addSource').onclick=addSourceCard;$('lookupSource').onchange=()=>{populateLookupSheetSelect();refreshLookupConditions();};$('lookupSheet').onchange=()=>{const src=state.sources[$('lookupSource').value],ws=src?.wb?.getWorksheet($('lookupSheet').value);if(ws)$('lookupHeaderRow').value=detectHeaderRow(ws);populateLookupFields();refreshLookupConditions();};$('lookupHeaderRow').onchange=()=>{populateLookupFields();refreshLookupConditions();};$('useLookup').onchange=()=>{['lookupSource','lookupSheet','key2','status2','date2','lookupHeaderRow'].forEach(id=>$(id).disabled=!$('useLookup').checked);};$('previewSourceSelect').onchange=renderSelectedSourcePreview;$('addFilter').onclick=()=>addFilter();$('addLookupCondition').onclick=()=>addLookupCondition();$('clearLookupConditions').onclick=()=>{$('lookupConditions').innerHTML='';};$('keepAll').onclick=()=>document.querySelectorAll('.keepCol').forEach(x=>x.checked=true);$('dropAll').onclick=()=>document.querySelectorAll('.keepCol').forEach(x=>x.checked=false);$('saveProfile').onclick=saveProfile;$('exportProfile').onclick=()=>downloadJson(collectConfig(),'настройки_отчета.json');$('importProfile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{applyConfig(JSON.parse(await f.text()));$('profileStatus').textContent='Настройки импортированы.';$('profileStatus').className='status ok';}catch(err){$('profileStatus').textContent='Не удалось импортировать настройки: '+err.message;$('profileStatus').className='status err';}});$('resetProfile').onclick=()=>{localStorage.removeItem('trainingReportProfileV2');$('profileStatus').textContent='Сохраненные настройки удалены.';$('profileStatus').className='status';};$('refreshResult').onclick=refreshResult;$('build').onclick=async()=>{try{await buildReport();}catch(err){console.error(err);$('buildStatus').textContent='Ошибка: '+err.message;$('buildStatus').className='status err';}};document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));$(btn.dataset.tab).classList.remove('hidden');});
+</script>
+</body>
+</html>
